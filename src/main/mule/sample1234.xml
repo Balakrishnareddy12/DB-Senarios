@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="9dbbc001-e565-4f48-b6b4-7696914f28fc" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="1234@Bala" database="sys" />
+	</db:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="a5ec5b3a-ae2e-4ed2-91bc-dff46caec535" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	
+	<flow name="databasesenariosFlow2" doc:id="f63a0f18-33e7-497c-b695-cc1cc84e3927" >
+		<http:listener doc:name="Listener" doc:id="35d5fc50-0a94-4d89-907b-1fc6dddb41b9" config-ref="HTTP_Listener_config" path="insertion"/>
+		<logger level="INFO" doc:name="Logger" doc:id="5425a0a4-c935-48f0-aa6a-69fa74182aab" message="Innsertion flow has been started"/>
+		<db:insert doc:name="Insert" doc:id="d1098515-80f8-42fe-bdf2-96c9849a73af" config-ref="Database_Config">
+			<db:sql ><![CDATA[INSERT INTO employee(id, Name, Address,phonenumber)
+VALUES (:id, :Name, :Address, :phonenumber)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: payload.id,
+	Name: payload.name,
+	Address: payload.address,
+	phonenumber: payload.phno
+}]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Transform Message" doc:id="df9fb6a7-f164-4cfb-9a0f-ce72517ed34a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{	
+	"status": 200,
+	"message": "data has been successfully inserted"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="databaseRetriveOperationFlow" doc:id="b8587d77-9c8a-4c45-bd5e-9c236f154f0d" >
+		<http:listener doc:name="Listener" doc:id="c736fc76-746a-40b4-bd36-66927505a9d7" config-ref="HTTP_Listener_config" path="fetching"/>
+		<set-variable value="#[attributes.queryParams.customerId]" doc:name="Set Variable" doc:id="42ddd086-4d44-44fc-994a-0dd844d82a8b" variableName="customerId"/>
+		<db:select doc:name="Select" doc:id="8a655d93-baa2-4537-bbad-972c38eefe3e" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from employee where id= :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: vars.customerId
+}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="0c482e2e-aedd-4c77-bc99-2ef7c865e4ae" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="databasesenariosFlow" doc:id="9b152afa-eeaa-4576-bd6a-ac953a9e5853" >
+		<http:listener doc:name="Listener" doc:id="cdddf8bc-30de-4991-8689-e35f59c96f03" config-ref="HTTP_Listener_config" path="update/{customerId}"/>
+		<logger level="INFO" doc:name="Logger" doc:id="efcb52c4-af24-472e-9a21-ae982d2dbbb9" message="flow has been started"/>
+		<db:update doc:name="Update" doc:id="7edd16d1-363e-49a8-a9d0-4004a3cf993b" config-ref="Database_Config">
+			<db:sql ><![CDATA[UPDATE employee
+SET Name = :Name, Address = :Address, phonenumber= :phonenumber
+WHERE id= :id;]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: payload.id,
+	Name: payload.name,
+	Address: payload.address,
+	phonenumber: payload.phno
+}]]]></db:input-parameters>
+		</db:update>
+		<ee:transform doc:name="Transform Message" doc:id="b0d4097a-fa8e-4a75-86fe-d0bd33a33c88" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"status": 200,
+	"message": "data has been successfully Inserted"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="databasesenariosFlow1" doc:id="5945e7d1-1176-410c-a273-a058b6d321f9" >
+		<http:listener doc:name="Listener" doc:id="bcc86884-1855-4414-91a0-8b6755dfba90" config-ref="HTTP_Listener_config" path="Delete/{customerId}"/>
+		<set-variable value="#[attributes.uriParams.customerId]" doc:name="Set Variable" doc:id="ebcf2d7f-5e59-4ae9-92ac-59103d10cd67" variableName="customerId"/>
+		<db:delete doc:name="Delete" doc:id="638f3c45-9eb3-4897-8824-6ae1c0b36c65" config-ref="Database_Config">
+			<db:sql ><![CDATA[DELETE FROM employee WHERE id= :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: vars.customerId
+}]]]></db:input-parameters>
+		</db:delete>
+		<ee:transform doc:name="Transform Message" doc:id="2bb2b5d8-7583-411b-8a20-77bcd847b423" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"status": 200,
+	"message": "Data has been successfully Deleted"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	</mule>
